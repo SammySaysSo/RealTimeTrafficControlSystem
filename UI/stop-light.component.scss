@@ -1,0 +1,153 @@
+// Styles for the cdkDrag placeholder to provide a visual cue
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+// Styles for the preview element that shows while dragging
+.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 8px;
+  box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2),
+              0 8px 10px 1px rgba(0, 0, 0, 0.14),
+              0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+// Ensure the element being dragged is brought to the front
+.cdk-drag-animating {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Main container for a set of traffic lights
+.traffic-light-post {
+  position: absolute; // Allows free positioning
+  display: flex;
+  flex-direction: column;
+  background-color: #333;
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid #222;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+  cursor: move; // Indicates the element is draggable
+  z-index: 10;
+}
+
+// Styling for each individual light circle
+.light {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin: 2px;
+  background-color: #555; // Default "off" color
+  transition: all 0.3s ease-in-out;
+  border: 1px solid #111;
+
+  // Active state styling for the red light
+  &.red.active {
+    background-color: #ff0000;
+    box-shadow: 0 0 20px #ff0000, 0 0 30px #ff0000;
+  }
+
+  // Active state styling for the yellow light
+  &.yellow.active {
+    background-color: #ffff00;
+    box-shadow: 0 0 20px #ffff00, 0 0 30px #ffff00;
+  }
+
+  // Active state styling for the green light
+  &.green.active {
+    background-color: #00ff00;
+    box-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00;
+  }
+}
+
+// Main container for the pedestrian signs
+.pedestrian-sign {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background-color: #333;
+    padding: 5px;
+    border-radius: 8px;
+    border: 2px solid #222;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+    cursor: move;
+    z-index: 10;
+}
+
+// Styling for the icons inside the pedestrian sign
+.ped-icon {
+    width: 40px;
+    height: 40px;
+    transition: all 0.3s ease-in-out;
+    color: #555; // Default "off" color
+
+    // Active state for the "walk" icon
+    &.walk.active {
+        color: #fff;
+        filter: drop-shadow(0 0 8px #fff);
+    }
+
+    // Active state for the "don't walk" icon
+    &.dont-walk.active {
+        color: #ff4500; // Orange-red color
+        filter: drop-shadow(0 0 8px #ff4500);
+    }
+}
+
+.intersection-container {
+  position: relative;
+  width: 100%; // or a fixed size like 800px
+  height: 1000px; // match image size
+  background-image: url("../../assets/intersection.png");
+  background-size: cover;
+  background-position: center;
+  overflow: hidden; // clip draggable elements to bounds
+}
+
+.car {
+    position: absolute;
+    width: 50px;
+    height: 30px;
+    background-color: #007bff; // A nice blue color
+    border: 2px solid #0056b3;
+    border-radius: 4px 4px 8px 8px;
+    z-index: 5; // Behind the traffic lights
+
+    // Styles for the horizontal car
+    &.verticle {
+        width: 30px; // Swap width and height
+        height: 50px;
+        border-radius: 8px 8px 4px 4px; // Adjust radius for horizontal look
+    }
+}
+
+.pedestrian {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  background-color: #28a745; // A nice green color
+  border: 2px solid #218838;
+  border-radius: 50%;
+  z-index: 5; // Behind the traffic lights
+
+  // Styles for the vertical pedestrian
+  &.verticle {
+    width: 30px; // Keep it circular
+    height: 30px;
+    border-radius: 50%; // Maintain circular shape
+  }
+}
+
+.content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+span {
+  margin-left: 5px;
+  margin-top: 5px;
+}

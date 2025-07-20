@@ -1,0 +1,27 @@
+<div class="intersection-container">
+    <div *ngFor="let light of trafficLights" class="traffic-light-post" cdkDrag [cdkDragFreeDragPosition]="light.position">
+        <div class="light red" [class.active]="light.activeLight === 'red'"></div>
+        <div class="light yellow" [class.active]="light.activeLight === 'yellow'"></div>
+        <div class="light green" [class.active]="light.activeLight === 'green'"></div>
+    </div>
+
+    <div class="pedestrian-sign" *ngFor="let sign of pedestrianSigns" cdkDrag [cdkDragFreeDragPosition]="sign.position">
+        <div *ngIf="sign.activeLight === 'walk'" class="ped-icon walk active">
+            <span class="material-icons"> directions_walk </span>
+        </div>
+
+        <div *ngIf="sign.activeLight === 'dontWalk'" class="ped-icon dont-walk active">
+            <span class="material-icons"> front_hand </span>
+        </div>
+    </div>
+
+    <div class="car" *ngFor="let car of cars" [style.transform]="'translate(' + car.position.x + 'px, ' + car.position.y + 'px)'" [class.verticle]="car.id === 0">
+        <h3>{{car.totalNumCars}}</h3>
+    </div>
+
+    <div class="pedestrian" *ngFor="let pedestrian of pedestrians" [style.transform]="'translate(' + pedestrian.position.x + 'px, ' + pedestrian.position.y + 'px)'" [class.verticle]="pedestrian.id === 0">
+        <h3>{{pedestrian.totalNumPeds}}</h3>
+    </div>
+</div>
+
+<h3 class="content">{{this.statusMessage}}. WaitTimeL1_L2: {{this.waitTimeL1_L2}}. WaitTimeL3: {{this.waitTimeL3}}. WaitTimeW1_W2: {{this.waitTimeW1_W2}}.</h3>
