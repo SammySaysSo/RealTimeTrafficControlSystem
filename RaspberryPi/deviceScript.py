@@ -32,6 +32,42 @@ pedestrian_zones = {
     'pedsW2_East':  (650, 50, 1150, 200)
 }
 
+selected_zone = None
+dragging = False
+drag_offset = (0, 0)
+zone_type = None  # 'vehicle' or 'pedestrian'
+
+def point_in_rect(x, y, rect):
+    x1, y1, x2, y2 = rect
+    return x1 <= x <= x2 and y1 <= y <= y2
+
+def mouse_callback(event, x, y, flags, param):
+    global selected_zone, dragging, drag_offset, zone_type
+    all_zones = {**vehicle_zones, **pedestrian_zones}
+    if event == cv2.EVENT_LBUTTONDOWN:
+        for name, rect in all_zones.items():
+            if point_in_rect(x, y, rect):
+                selected_zone = name
+                zone_type = 'vehicle' if name.startswith('cars') else 'pedestrian'
+                rx1, ry1, rx2, ry2 = rect
+                drag_offset = (x - rx1, y - ry1)
+                dragging = True
+                break
+    elif event == cv2.EVENT_MOUSEMOVE and dragging and selected_zone:
+        # Move the rectangle (top-left corner follows mouse, keep size)
+        all_zones = vehicle_zones if zone_type == 'vehicle' else pedestrian_zones
+        rx1, ry1, rx2, ry2 = all_zones[selected_zone]
+        w, h = rx2 - rx1, ry2 - ry1
+        new_x1 = x - drag_offset[0]
+        new_y1 = y - drag_offset[1]
+        all_zones[selected_zone] = (new_x1, new_y1, new_x1 + w, new_y1 + h)
+    elif event == cv2.EVENT_LBUTTONUP:
+        dragging = False
+        selected_zone = None
+
+cv2.namedWindow('YOLOv8 Zone Detection')
+cv2.setMouseCallback('YOLOv8 Zone Detection', mouse_callback)
+
 if not cap.isOpened():
     print("Camera not detected.")
     exit()
@@ -84,7 +120,8 @@ while True:
     # Draw all zones with labels
     for name, (x1, y1, x2, y2) in {**vehicle_zones, **pedestrian_zones}.items():
         color = (255, 0, 0) if name.startswith('cars') else (0, 255, 0)
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        thickness = 3 if name == selected_zone else 2
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
         count = zone_counts[name]
         cv2.putText(frame, f"{name}: {count}", (x1 + 5, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
