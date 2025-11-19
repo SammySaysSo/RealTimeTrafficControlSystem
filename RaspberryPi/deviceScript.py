@@ -77,6 +77,7 @@ desired_classes = [0, 2, 3, 5, 7] # person: 0, car: 2, motorcycle: 3, bus: 5, tr
 TARGET_WIDTH = 1280
 TARGET_HEIGHT = 720
 last_results = None
+waitTimeL1_L2, waitTimeL3, waitTimeW1_W2 = 0, 0, 0
 while True:
     ret, frame = cap.read()
     if not ret:
