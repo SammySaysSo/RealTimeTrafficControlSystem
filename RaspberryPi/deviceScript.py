@@ -21,15 +21,15 @@ height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
 fps = cap.get(cv2.CAP_PROP_FPS)
 print(f"Camera initialized at {int(width)}x{int(height)} @ {int(fps)} FPS")
 
-vehicle_zones = { # Zone definitions: (x1, y1, x2, y2)
-    'carsL1_West':  (50, 400, 500, 550),
-    'carsL2_East':  (700, 225, 1250, 375),
-    'carsL3_North': (500, 600, 750, 750)
+vehicle_zones = {
+    'carsL1_West':  (50, 600, 500, 750),
+    'carsL2_East':  (500, 600, 750, 750)
 }
 
 pedestrian_zones = {
-    'pedsW1_West':  (100, 50, 600, 200),
-    'pedsW2_East':  (650, 50, 1150, 200)
+    'pedsW1_West':  (100, 50, 600, 550),
+    'pedsW2_East':  (750, 600, 1250, 750),
+    'carsL3_North': (650, 50, 1150, 550)
 }
 
 selected_zone = None
@@ -90,7 +90,7 @@ while True:
     # 2. ---- Run YOLO only every 4 frames ----
     if frame_count % 4 == 0:
         # We pass the already resized frame
-        results = model(frame, imgsz=TARGET_WIDTH, classes=desired_classes, verbose=False)
+        results = model(frame, imgsz=TARGET_WIDTH, classes=desired_classes, verbose=True)
         if results:
             last_results = results[0]
             
@@ -185,8 +185,12 @@ while True:
         waitTimeW1_W2 = 0
 
     # Display stats
-    cv2.putText(frame, f"Wait L1/L2: {waitTimeL1_L2}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
-    cv2.putText(frame, f"Wait L3: {waitTimeL3}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+    # cv2.putText(frame, f"Wait L1/L2: {waitTimeL1_L2}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+    # cv2.putText(frame, f"Wait L3: {waitTimeL3}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+
+    cv2.putText(frame, f"L1/L2 Wait: {waitTimeL1_L2}s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
+    cv2.putText(frame, f"L3 Wait: {waitTimeL3}s", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
+    cv2.putText(frame, f"W1/W2 Wait: {waitTimeW1_W2}s", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
     
     cv2.imshow('YOLOv8 Optimized', frame)
 
