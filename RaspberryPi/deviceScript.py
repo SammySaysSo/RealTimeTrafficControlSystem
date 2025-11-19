@@ -12,8 +12,8 @@ cap = cv2.VideoCapture(0) #assuming only one camera, windows: cap = cv2.VideoCap
 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG')) #so not still framing
 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280) #setting max width, height, & fps, raspberrpy pi: 640x480, 1280x720, 1280x960, 1920x1080
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640) #setting max width, height, & fps, raspberrpy pi: 640x480, 1280x720, 1280x960, 1920x1080
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 cap.set(cv2.CAP_PROP_FPS, 30)
 
 width  = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -22,14 +22,14 @@ fps = cap.get(cv2.CAP_PROP_FPS)
 print(f"Camera initialized at {int(width)}x{int(height)} @ {int(fps)} FPS")
 
 vehicle_zones = {
-    'carsL1_West':  (50, 600, 500, 750),
-    'carsL2_East':  (500, 600, 750, 750)
+    'carsL1_West':  (20, 440, 245, 480),
+    'carsL2_East':  (245, 440, 395, 480)
 }
 
 pedestrian_zones = {
-    'pedsW1_West':  (100, 50, 600, 550),
-    'pedsW2_East':  (750, 600, 1250, 750),
-    'carsL3_North': (650, 50, 1150, 550)
+    'pedsW1_West':  (20, 35, 320, 410), #no touch
+    'pedsW2_East':  (395, 440, 640, 480),
+    'carsL3_North': (320, 35, 640, 410) #no touch
 }
 
 selected_zone = None
@@ -74,8 +74,8 @@ if not cap.isOpened():
 
 frame_count = 0
 desired_classes = [0, 2, 3, 5, 7] # person: 0, car: 2, motorcycle: 3, bus: 5, truck: 7
-TARGET_WIDTH = 1280
-TARGET_HEIGHT = 720
+TARGET_WIDTH = 640
+TARGET_HEIGHT = 480
 last_results = None
 waitTimeL1_L2, waitTimeL3, waitTimeW1_W2 = 0, 0, 0
 while True:
@@ -188,9 +188,9 @@ while True:
     # cv2.putText(frame, f"Wait L1/L2: {waitTimeL1_L2}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
     # cv2.putText(frame, f"Wait L3: {waitTimeL3}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
 
-    cv2.putText(frame, f"L1/L2 Wait: {waitTimeL1_L2}s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
-    cv2.putText(frame, f"L3 Wait: {waitTimeL3}s", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
-    cv2.putText(frame, f"W1/W2 Wait: {waitTimeW1_W2}s", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
+    # cv2.putText(frame, f"L1/L2 Wait: {waitTimeL1_L2}s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
+    cv2.putText(frame, f"L3 Wait: {waitTimeL3}s", (325, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
+    cv2.putText(frame, f"W1/W2 Wait: {waitTimeW1_W2}s", (25, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7,(255,255,255),2)
     
     cv2.imshow('YOLOv8 Optimized', frame)
 
