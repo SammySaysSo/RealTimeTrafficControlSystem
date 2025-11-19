@@ -74,89 +74,122 @@ if not cap.isOpened():
 
 frame_count = 0
 desired_classes = [0, 2, 3, 5, 7] # person: 0, car: 2, motorcycle: 3, bus: 5, truck: 7
+TARGET_WIDTH = 1280
+TARGET_HEIGHT = 720
+last_results = None
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    # Uncomment the following lines if you want to resize the frame for performance on raspberry pi
-    # if frame_count % 4 == 0:  #run YOLO every 4th frame ~ bc it's very slow since on CPU and not on GPU bc its a raspberry pi ~ still good enough hopefully :(
-    #     resized_frame = cv2.resize(frame, (320, 192)) #if need to resize for performance
-    #     results = model(resized_frame, imgsz=320, classes=desired_classes)[0]
-    #     last_annotated = results.plot()
-    #     cv2.imshow('YOLOv8 Detection', last_annotated)
-    # elif last_annotated is not None:
-    #     cv2.imshow('YOLOv8 Detection', last_annotated)
-    # else:
-    #     cv2.imshow('YOLOv8 Detection', frame)
-    # frame_count += 1
+    # 1. Resize FRAME immediately. 
+    # This ensures drawing coordinates and YOLO coordinates always match.
+    frame = cv2.resize(frame, (TARGET_WIDTH, TARGET_HEIGHT))
 
-    results = model(frame, imgsz=1280, classes=desired_classes)[0]
+    # 2. ---- Run YOLO only every 4 frames ----
+    if frame_count % 4 == 0:
+        # We pass the already resized frame
+        results = model(frame, imgsz=TARGET_WIDTH, classes=desired_classes, verbose=False)
+        if results:
+            last_results = results[0]
+            
+        # OPTIONAL: Update DB only when we have new data to save bandwidth/CPU
+        # Moving this here reduces lag significantly
+        data = {
+            'carsL1_West': zone_counts['carsL1_West'] if 'zone_counts' in locals() else 0,
+            'carsL2_East': zone_counts['carsL2_East'] if 'zone_counts' in locals() else 0,
+            'carsL3_North': zone_counts['carsL3_North'] if 'zone_counts' in locals() else 0,
+            'pedsW1_West': zone_counts['pedsW1_West'] if 'zone_counts' in locals() else 0,
+            'pedsW2_East': zone_counts['pedsW2_East'] if 'zone_counts' in locals() else 0,
+            'pedsW3_South': 0,
+            'waitTimeL1_L2': waitTimeL1_L2,
+            'waitTimeL3': waitTimeL3,
+            'waitTimeW1_W2': waitTimeW1_W2
+        }
+        # Use update instead of set to reduce overhead if possible, or run this in a separate thread
+        db.reference('trafficData').set(data)
+    # --------------------------------------
 
-    zone_counts = {'carsL1_West': 0, 'carsL2_East': 0, 'carsL3_North': 0,'pedsW1_West': 0, 'pedsW2_East': 0}
+    # If we haven't had a successful detection yet, skip drawing
+    if last_results is None:
+        frame_count += 1
+        continue
 
-    for box, cls in zip(results.boxes.xyxy, results.boxes.cls):
-        x1, y1, x2, y2 = map(int, box)
-        class_id = int(cls)
-        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2  # center point
+    # 3. ---- Reset counts for THIS frame ----
+    zone_counts = {
+        'carsL1_West': 0, 'carsL2_East': 0, 'carsL3_North': 0,
+        'pedsW1_West': 0, 'pedsW2_East': 0
+    }
 
-        # Draw detection center
-        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+    # 4. ---- Iterate over CACHED results ----
+    # Even if we didn't run YOLO this frame, we process the old boxes
+    # so the counters and visuals persist smoothly.
+    if last_results.boxes:
+        for box, cls in zip(last_results.boxes.xyxy, last_results.boxes.cls):
+            x1, y1, x2, y2 = map(int, box)
+            class_id = int(cls)
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
 
-        # Vehicle zones
-        if class_id in [2, 3, 5, 7]:
-            for name, (zx1, zy1, zx2, zy2) in vehicle_zones.items():
-                if zx1 <= cx <= zx2 and zy1 <= cy <= zy2:
-                    zone_counts[name] += 1
-                    break  # one zone per detection
+            # Draw bounding box (Optional: Visual confirmation)
+            # cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 0), 1)
+            
+            # Draw center point
+            cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
 
-        # Pedestrian zones
-        elif class_id == 0:
-            for name, (zx1, zy1, zx2, zy2) in pedestrian_zones.items():
-                if zx1 <= cx <= zx2 and zy1 <= cy <= zy2:
-                    zone_counts[name] += 1
-                    break
+            # Vehicle zones
+            if class_id in [2, 3, 5, 7]:
+                for name, (zx1, zy1, zx2, zy2) in vehicle_zones.items():
+                    if zx1 <= cx <= zx2 and zy1 <= cy <= zy2:
+                        zone_counts[name] += 1
+                        # break # Remove break if a car can be in two overlapping zones
 
-    # Draw all zones with labels
+            # Pedestrian zones
+            elif class_id == 0:
+                for name, (zx1, zy1, zx2, zy2) in pedestrian_zones.items():
+                    if zx1 <= cx <= zx2 and zy1 <= cy <= zy2:
+                        zone_counts[name] += 1
+                        # break
+
+    # 5. ---- Draw Zones and HUD ----
     for name, (x1, y1, x2, y2) in {**vehicle_zones, **pedestrian_zones}.items():
-        color = (255, 0, 0) if name.startswith('cars') else (0, 255, 0)
-        thickness = 3 if name == selected_zone else 2
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
-        count = zone_counts[name]
-        cv2.putText(frame, f"{name}: {count}", (x1 + 5, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+        # Check if zone has activity for color change
+        count = zone_counts.get(name, 0)
+        color = (0, 255, 0) # Green standard
+        if count > 0:
+            color = (0, 0, 255) # Red if occupied
+            
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(frame, f"{name}: {count}", (x1 + 5, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
 
-    # Assign counts to variables
+    # 6. ---- Accumulate Wait Times ----
+    # (Logic remains the same, running every frame)
     carsL1_West = zone_counts['carsL1_West']
     carsL2_East = zone_counts['carsL2_East']
     carsL3_North = zone_counts['carsL3_North']
     pedsW1_West = zone_counts['pedsW1_West']
     pedsW2_East = zone_counts['pedsW2_East']
 
-    # Example wait time logic
-    waitTimeL1_L2 = (carsL1_West + carsL2_East) * 3  # seconds per vehicle
-    waitTimeL3 = carsL3_North * 2
-    waitTimeW1_W2 = (pedsW1_West + pedsW2_East) * 4
+    waitTimeL1_L2 += carsL1_West + carsL2_East
+    waitTimeL3 += carsL3_North
+    waitTimeW1_W2 += pedsW1_West + pedsW2_East
 
-    data = {
-        'carsL1_West': carsL1_West,
-        'carsL2_East': carsL2_East,
-        'carsL3_North': carsL3_North,
-        'pedsW1_West': pedsW1_West,
-        'pedsW2_East': pedsW2_East,
-        'pedsW3_South': 0,
-        'waitTimeL1_L2': waitTimeL1_L2,
-        'waitTimeL3': waitTimeL3,
-        'waitTimeW1_W2': waitTimeW1_W2
-    }
-    db.reference('trafficData').set(data)
+    # Reset logic
+    if carsL1_West == 0 and carsL2_East == 0:
+        waitTimeL1_L2 = 0
+    if carsL3_North == 0:
+        waitTimeL3 = 0
+    if pedsW1_West == 0 and pedsW2_East == 0:
+        waitTimeW1_W2 = 0
 
-    # Display wait times
-    cv2.putText(frame, f"waitTimeL1_L2: {waitTimeL1_L2}s", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-    cv2.putText(frame, f"waitTimeL3: {waitTimeL3}s", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-    cv2.putText(frame, f"waitTimeW1_W2: {waitTimeW1_W2}s", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    # Display stats
+    cv2.putText(frame, f"Wait L1/L2: {waitTimeL1_L2}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+    cv2.putText(frame, f"Wait L3: {waitTimeL3}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2)
+    
+    cv2.imshow('YOLOv8 Optimized', frame)
 
-    cv2.imshow('YOLOv8 Zone Detection', frame)
-
+    frame_count += 1
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
